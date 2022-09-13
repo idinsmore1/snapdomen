@@ -5,17 +5,14 @@ from datetime import datetime
 import natsort
 import numpy as np
 import pydicom
-from numba import njit
+# from numba import njit
+from .utils import transform_to_hu, window_image
 
 
 class DicomSeries:
     """
     A class representing a series of dicom files in a specified directory\n
-    :param directory: the directory containing the series
-    :param filepattern: the file pattern of the series
-    :param window_center: the center of the hounsfield units to view the images (default: 30)
-    :param window_width: the width of the hounsfield units to view the images (default: 150)
-    :param read_images: a boolean indicating whether to read the images or not (default: True)
+
     """
     orientations = {
         'COR': [1, 0, 0, 0, 0, -1],
@@ -42,7 +39,13 @@ class DicomSeries:
     }
 
     def __init__(self, directory, filepattern='*.dcm', window_center=30, window_width=150, read_images=True):
-
+        """
+        :param directory: the directory containing the series
+        :param filepattern: the file pattern of the series
+        :param window_center: the center of the hounsfield units to view the images (default: 30)
+        :param window_width: the width of the hounsfield units to view the images (default: 150)
+        :param read_images: a boolean indicating whether to read the images or not (default: True)
+        """
         if not os.path.exists(directory) or not os.path.isdir(directory):
             raise ValueError(f'Given directory does not exist or is not a file: {directory}')
 
@@ -100,10 +103,10 @@ class DicomSeries:
         combined_image = np.stack(sorted_ct, axis=0)
         # Convert to hounsfield units
         logging.info(f'- Converting to hounsfield units...')
-        hu_image = self.transform_to_hu(combined_image, slope, intercept)
+        hu_image = transform_to_hu(combined_image, slope, intercept)
         # Window the hounsfield units
         logging.info(f'- Windowing hounsfield units...')
-        windowed_image = self.window_image(hu_image, window_center, window_width)
+        windowed_image = window_image(hu_image, window_center, window_width)
         # return the windowed image
         logging.info(f'- Done!\n')
         return windowed_image
@@ -171,33 +174,3 @@ class DicomSeries:
         # Get the frontal MIP
         mip = np.amax(pixel_array, axis=axis)
         return mip
-
-    @staticmethod
-    @njit
-    def transform_to_hu(image: np.ndarray, slope: float, intercept: float) -> np.ndarray:
-        """
-        A function to transform a ct scan image into hounsfield units \n
-        :param image: a numpy array containing the raw ct scan
-        :param slope: the slope rescaling factor from the dicom file (0 if already in hounsfield units)
-        :param intercept: the intercept value from the dicom file (depends on the machine)
-        :return: a copy of the numpy array converted into hounsfield units
-        """
-        hu_image = image * slope + intercept
-        return hu_image
-
-    @staticmethod
-    @njit
-    def window_image(image: np.ndarray, window_center: int, window_width: int):
-        """
-        A function to window the hounsfield units of the ct scan \n
-        :param image: a numpy array containing the hounsfield ct scan
-        :param window_center: hounsfield window center
-        :param window_width: hounsfield window width
-        :return: a windowed copy of 'image' parameter
-        """
-        # Get the min/max hounsfield units for the dicom image
-        img_min = window_center - window_width // 2
-        img_max = window_center + window_width // 2
-
-        new_image = np.clip(image, img_min, img_max)
-        return new_image
