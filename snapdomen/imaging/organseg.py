@@ -1,4 +1,5 @@
 import numpy as np
+from numba import njit
 from scipy.ndimage import binary_erosion
 from itertools import groupby
 from operator import itemgetter
@@ -9,24 +10,27 @@ class OrganSeg:
     """
     A class representing the segmentation of an organ in a CT scan\n
     """
-    DISTANCE_BETWEEN_SLICES = 5
+    DISTANCE_BETWEEN_SLICES = 10
 
     def __init__(self, segmentation: np.ndarray, organ: str, spacing: List[float]):
         # self.original_seg = segmentation
         self.max_slice = segmentation.shape[0] - 1
         self.min_slice = 0
         self.organ = organ
+        # Set the threshold for
         if organ == 'spleen':
             self.threshold = 100
         else:
             self.threshold = 0
+
         if organ == 'spleen':
             self.n_rois = 1
         else:
             self.n_rois = 3
 
-        self.seg = self._prepare_seg_output(segmentation)
-        self.center_point = self._erode_seg(self.seg, self.threshold)
+        self.pixel_radius = self.calculate_pixel_radius(spacing[0], roi_area=2.5)
+        self.seg = self._prepare_seg_output(segmentation, self.threshold)
+        self.center_point = self._erode_seg(self.seg)
         self.center_slice = self.seg[self.center_point[0], :, :].copy()
 
         # get the superior and inferior slices
@@ -34,13 +38,19 @@ class OrganSeg:
         self.measure_distance = OrganSeg.DISTANCE_BETWEEN_SLICES // spacing[-1]
         if self.center_point[0] - self.measure_distance < self.min_slice:
             self.superior_slice = self.seg[self.min_slice, :, :].copy()
+            self.superior_point = [self.min_slice, self.center_point[1], self.center_point[2]]
         else:
-            self.superior_slice = self.seg[self.center_point[0] - self.measure_distance, :, :].copy()
+            self.superior_slice = self.seg[int(self.center_point[0] - self.measure_distance), :, :].copy()
+            self.superior_point = [int(self.center_point[0] - self.measure_distance), self.center_point[1],
+                                   self.center_point[2]]
 
         if self.center_point[0] + self.measure_distance > self.max_slice:
             self.inferior_slice = self.seg[self.max_slice, :, :].copy()
+            self.inferior_point = [self.max_slice, self.center_point[1], self.center_point[2]]
         else:
-            self.inferior_slice = self.seg[self.center_point[0] + self.measure_distance, :, :].copy()
+            self.inferior_slice = self.seg[int(self.center_point[0] + self.measure_distance), :, :].copy()
+            self.inferior_point = [int(self.center_point[0] + self.measure_distance), self.center_point[1],
+                                   self.center_point[2]]
 
     @staticmethod
     def _longest_consecutive_seg(numbers: List):
@@ -121,3 +131,18 @@ class OrganSeg:
         single = np.argwhere(seg_erode)
         single = single[int(len(single) / 2)]
         return single
+
+    @staticmethod
+    @njit
+    def calculate_pixel_radius(width: float, roi_area):
+        """
+        Calculate the radius of an ROI in pixels
+        :param width: the width of the pixel in mm
+        :param roi_area: desired area of ROI in centimeters
+        :return: radius in pixels for the ROI
+        """
+        # Get the pixel width in centimeters
+        pixel_width = width / 10
+        radius = np.sqrt(roi_area / np.pi)
+        pixel_radius = int(np.ceil(radius / pixel_width))
+        return pixel_radius
