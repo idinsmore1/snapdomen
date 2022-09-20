@@ -55,7 +55,6 @@ class DicomSeries:
         self.mrn = self.series_info['mrn']
         self.accession = self.series_info['accession']
         self.cut = self.series_info['cut']
-
         if read_images:
             self.pixel_array = self._read_dicom_series(directory, filepattern, self.header.RescaleSlope,
                                                        self.header.RescaleIntercept, window_center, window_width)
