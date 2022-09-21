@@ -7,8 +7,9 @@ def normalize_image(img):
     :param img: the image to be normalized
     :return: the normalized image
     """
-    min_, max_ = float(np.min(img)), float(np.max(img))
-    return (img - min_) / (max_ - min_)
+    new_img = img.copy()
+    min_, max_ = float(np.min(new_img)), float(np.max(new_img))
+    return (new_img - min_) / (max_ - min_)
 
 
 @njit

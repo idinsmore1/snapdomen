@@ -3,16 +3,24 @@ from numba import njit
 from scipy.ndimage import binary_erosion
 from itertools import groupby
 from operator import itemgetter
-from typing import List
+from typing import List as ListType
+from typing import Tuple
 
 
 class OrganSeg:
     """
     A class representing the segmentation of an organ in a CT scan\n
     """
-    DISTANCE_BETWEEN_SLICES = 10
+    # Distance between slices in mm to measure
+    DISTANCE_BETWEEN_SLICES = 20
 
-    def __init__(self, segmentation: np.ndarray, organ: str, spacing: List[float]):
+    def __init__(self, segmentation: np.ndarray, organ: str, spacing: ListType[float], roi_area: float = 2.5):
+        """
+        :param segmentation: the output from the UNet
+        :param organ: the name of the organ being segmented
+        :param spacing: the pixel spacing of the CT scan
+        :param roi_area: the desired area of the ROI in cm^2 (default: 2.5)
+        """
         # self.original_seg = segmentation
         self.max_slice = segmentation.shape[0] - 1
         self.min_slice = 0
@@ -28,7 +36,7 @@ class OrganSeg:
         else:
             self.n_rois = 3
 
-        self.pixel_radius = self.calculate_pixel_radius(spacing[0], roi_area=2.5)
+        self.pixel_radius = self.calculate_pixel_radius(spacing[0], roi_area)
         self.seg = self._prepare_seg_output(segmentation, self.threshold)
         self.center_point = self._erode_seg(self.seg)
         self.center_slice = self.seg[self.center_point[0], :, :].copy()
@@ -53,7 +61,7 @@ class OrganSeg:
                                    self.center_point[2]]
 
     @staticmethod
-    def _longest_consecutive_seg(numbers: List):
+    def _longest_consecutive_seg(numbers: ListType):
         """
         A function to find the longest consecutive cut of liver from a segmentation\n
         :param numbers: a list of indices containing liver segmentations
@@ -114,7 +122,7 @@ class OrganSeg:
     @staticmethod
     def _erode_seg(seg_erode: np.ndarray, erosion_limit=100) -> np.ndarray:
         """
-        A function to erode down a segmentation using erode3d \n
+        A function to erode down a segmentation using erode3d function\n
         :param seg_erode: segmentation of original size to erode
         :param erosion_limit: limit to stop eroding the image down (default: 100)
         :return: a numpy array containing the center point

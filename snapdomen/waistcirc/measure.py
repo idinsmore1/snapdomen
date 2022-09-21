@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import binary_fill_holes, binary_erosion
 from skimage.measure import label, find_contours, regionprops
 from typing import Tuple, Any
-
+from snapdomen.imaging.dicomseries import DicomSeries
 
 # @njit
 def binarize_image(image: np.ndarray, threshold: int = -500) -> np.ndarray:
@@ -61,27 +61,6 @@ def measure_circumference(body_array: np.ndarray, pixel_width: float, pixel_unit
     return np.round(waist_cm)
 
 
-def get_waist_circumference(axial_array: np.ndarray, l3_slice: np.ndarray, spacing: list) -> Tuple[Any, Any]:
-    """
-    A function to measure the circumference of the body in centimeters\n
-    :param axial_array: the axial ct scan series
-    :param l3_slice: the index of the l3 axial slice
-    :param spacing: the spacing of the ct scan in millimeters
-    :return: the circumference of the body in centimeters
-    """
-    l3_image = axial_array[l3_slice]
-    # Remove exterior artifacts
-    binary_l3 = binarize_image(l3_image)
-    body = get_largest_connected_component(binary_l3)
-    l3_pp = remove_exterior_artifacts(l3_image, body)
-    # Measure circumference
-    l3_pp = binarize_image(l3_pp)
-    # Erosion is to remove small artifacts attached to body (clips from table, etc
-    l3_pp = binary_erosion(l3_pp, iterations=4)
-    waist_circ = measure_circumference(l3_pp, spacing[0])
-    return l3_pp, waist_circ
-
-
 def plot_contours(original_image, body_mask, output_path):
     """
     A function to plot the contours of the waist circumference around original image
@@ -101,3 +80,25 @@ def plot_contours(original_image, body_mask, output_path):
     ax.set_xticks([])
     ax.set_yticks([])
     plt.savefig(output_path)
+
+
+def get_waist_circumference(series: DicomSeries, slice_idx: np.ndarray) -> Tuple[Any, Any]:
+    """
+    A function to measure the circumference of the body in centimeters\n
+    :param axial_array: the axial ct scan series
+    :param slice_idx: the index of the axial slice to be measured
+    :param spacing: the spacing of the ct scan in millimeters
+    :return: the circumference of the body in centimeters
+    """
+    l3_image = series.pixel_array[slice_idx].copy()
+    spacing = series.spacing[0]
+    # Remove exterior artifacts
+    binary_l3 = binarize_image(l3_image)
+    body = get_largest_connected_component(binary_l3)
+    l3_pp = remove_exterior_artifacts(l3_image, body)
+    # Measure circumference
+    l3_pp = binarize_image(l3_pp)
+    # Erosion is to remove small artifacts attached to body (clips from table, etc
+    l3_pp = binary_erosion(l3_pp, iterations=4)
+    waist_circ = measure_circumference(l3_pp, spacing)
+    return l3_pp, waist_circ
