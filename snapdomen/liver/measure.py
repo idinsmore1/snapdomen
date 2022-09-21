@@ -125,22 +125,29 @@ def measure_spleen_hu(series: DicomSeries, model_weights, roi_area=5, alpha=0.55
     K.clear_session()
     spleen_seg = OrganSeg(spleen_seg, 'spleen', series.spacing, roi_area=roi_area)
     # create lists to hold the appropriate values
-    names = ['superior', 'center', 'inferior']
-    indices = [spleen_seg.superior_point, spleen_seg.center_point, spleen_seg.inferior_point]
-    masks = [spleen_seg.superior_slice, spleen_seg.center_slice, spleen_seg.inferior_slice]
-    # measure hounsfield units of various measurments
+    # names = ['superior', 'center', 'inferior']
+    # indices = [spleen_seg.superior_point, spleen_seg.center_point, spleen_seg.inferior_point]
+    # masks = [spleen_seg.superior_slice, spleen_seg.center_slice, spleen_seg.inferior_slice]
+    # measure hounsfield units of various measurements
     hounsfield_data = {}
     vol_mean, _ = measure_hounsfields_in_mask(original_series, spleen_seg.seg)
     hounsfield_data['spleen_volume_hu_mean'] = vol_mean
     # Measure slicewise hounsfield units
-    for idx, mask, name in zip(indices, masks, names):
-        ct_image = original_series[idx[0]].copy()
-        mean, _ = measure_hounsfields_in_mask(ct_image, mask)
-        hounsfield_data[f'spleen_{name}_slice_hu_mean'] = mean
-        # hounsfield_data[f'{name}_slice_hu_std'] = std
-        # Measure the hounsfield units of the ROIs
-        center = tuple(idx[2], idx[1])
-        roi_mask = draw_roi_mask(mask, spleen_seg.pixel_radius, center)
-        mean, _ = measure_hounsfields_in_mask(ct_image, roi_mask)
-        hounsfield_data[f'spleen_{name}_slice_roi_hu_mean'] = mean
+    # for idx, mask, name in zip(indices, masks, names):
+    #     ct_image = original_series[idx[0]].copy()
+    #     mean, _ = measure_hounsfields_in_mask(ct_image, mask)
+    #     hounsfield_data[f'spleen_{name}_slice_hu_mean'] = mean
+    #     # hounsfield_data[f'{name}_slice_hu_std'] = std
+    #     # Measure the hounsfield units of the ROIs
+    #     center = (idx[2], idx[1])
+    #     roi_mask = draw_roi_mask(mask, spleen_seg.pixel_radius, center)
+    #     mean, _ = measure_hounsfields_in_mask(ct_image, roi_mask)
+    #     hounsfield_data[f'spleen_{name}_slice_roi_hu_mean'] = mean
+    ct_center = original_series[spleen_seg.center_point[0]]
+    slice_mean, _ = measure_hounsfields_in_mask(ct_center, spleen_seg.center_slice)
+    hounsfield_data['spleen_center_slice_hu_mean'] = slice_mean
+    roi_center = (spleen_seg.center_point[1], spleen_seg.center_point[2])
+    center_roi = draw_roi_mask(spleen_seg.center_slice, spleen_seg.pixel_radius, roi_center)
+    roi_mean, _ = measure_hounsfields_in_mask(ct_center, center_roi)
+    hounsfield_data['spleen_center_slice_roi_hu_mean'] = roi_mean
     return hounsfield_data

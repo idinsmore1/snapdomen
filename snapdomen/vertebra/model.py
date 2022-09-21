@@ -58,17 +58,14 @@ class GlobalMaxHorizontalPooling2D(_GlobalHorizontalPooling2D):
         #     return K.max(inputs, axis=[3])
 
 
-def load_model(model_path, model_weights=None):
+def load_model(model_path):
     """
     Load a model from a file.
     :param model_path: the path to the model file
-    :param model_weights: the path to the weights file
     :return: the model
     """
     with open(model_path, 'rb') as f:
         model_string = f.read()
     model = model_from_json(model_string, custom_objects={'GlobalMaxHorizontalPooling2D': GlobalMaxHorizontalPooling2D})
     model.compile(optimizer='adam', loss='categorical_crossentropy')
-    if model_weights is not None:
-        model.load_weights(model_weights)
     return model

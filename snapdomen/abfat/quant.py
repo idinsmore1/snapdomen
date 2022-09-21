@@ -1,10 +1,11 @@
 import numpy as np
-
+import keras.backend as K
 from scipy.ndimage import binary_fill_holes, binary_erosion
-from .model import build_unet
 
+from .model import build_unet
 from snapdomen.imaging.utils import normalize_image
 from snapdomen.waistcirc.measure import get_largest_connected_component, get_waist_circumference
+from snapdomen.imaging.dicomseries import DicomSeries
 
 
 def extract_abdomen(pixel_array, start_point, end_point):
@@ -15,7 +16,7 @@ def extract_abdomen(pixel_array, start_point, end_point):
     :param end_point: end point axial index (usually the l5 vertebra)
     :return: the extracted abdomen array
     """
-    abdomen = pixel_array[start_point: end_point, : , :].copy()
+    abdomen = pixel_array[start_point: end_point, :, :].copy()
     return abdomen
 
 
@@ -59,3 +60,50 @@ def measure_fat(image, mask, pixel_height, pixel_width, window=(-190, -30)):
     fat_area = fat_pixels * pixel_height * pixel_width
     return fat_pixels, fat_area
 
+
+def predict_abdomen(series: DicomSeries, start: int, end: int, model_weights: str):
+    """
+    Predict the abdomen segmentation from a ct scan
+    :param series: the ct scan
+    :param start: the start axial index
+    :param end: the end axial index
+    :param model_weights: the path to the model weights
+    :return: the abdomen segmentation
+    """
+    abdomen = extract_abdomen(series.pixel_array, start, end)
+    abdomen_norm = normalize_image(abdomen)[..., np.newaxis]
+    model = build_unet((512, 512, 1), base_filter=32)
+    model.load_weights(model_weights)
+    preds = model.predict(abdomen_norm)
+    K.clear_session()
+    preds = postprocess_prediciton(preds)
+    return preds
+
+
+def quantify_abdominal_fat(series, start, end, model_weights):
+    """
+    Quantify the fat in the abdomen from a ct scan
+    :param series: the ct scan
+    :param start: the start axial index
+    :param end: the end axial index
+    :param model_weights: the path to the model weights
+    :return: the fat measurements for each slice
+    """
+    preds = predict_abdomen(series, start, end, model_weights)
+    measurements = {}
+    for i in range(start, end):
+        image = series.pixel_array[i].copy()
+        pred = preds[i - start]
+        interior, exterior = separate_abdominal_cavity(image, pred)
+        visceral_fat_pixels, visceral_fat_area = measure_fat(image, interior, series.spacing[0], series.spacing[1])
+        subcutaneous_fat_pixels, subcutaneous_fat_area = measure_fat(image, exterior, series.spacing[0],
+                                                                     series.spacing[1])
+        _, wc = get_waist_circumference(series, i)
+        measurements[f'slice_{i}'] = {
+            'waist_circumference': float(wc),
+            'visceral_fat_pixels': int(visceral_fat_pixels),
+            'visceral_fat_area': float(visceral_fat_area),
+            'subcutaneous_fat_pixels': int(subcutaneous_fat_pixels),
+            'subcutaneous_fat_area': float(subcutaneous_fat_area)
+        }
+    return measurements

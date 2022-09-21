@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.ndimage import zoom
 import matplotlib.pyplot as plt
+import keras.backend as K
 
 
 def normalize_zero_one(image, eps=1e-8):
@@ -62,6 +63,28 @@ def rescale_prediction(prediction, original_spacing):
     slice_n = np.argmax(prediction[0])
     slice_n = np.int16(slice_n // original_spacing[2])
     return slice_n, probability
+
+
+def detect_vertebra(frontal_mip, model, vertebra_weights, vertebra_names, spacing, target_spacing):
+    image, _ = preprocess_for_detection(frontal_mip, spacing, target_spacing)
+    vertebra_info = {}
+    for weight, name in zip(vertebra_weights, vertebra_names):
+        model.load_weights(weight)
+        prediction = model.predict(image)
+        slice_n, probability = rescale_prediction(prediction, spacing)
+        vertebra_info[f'{name}_slice'] = slice_n.tolist()
+        vertebra_info[f'{name}_probability'] = probability.tolist()
+    K.clear_session()
+    return vertebra_info
+
+
+def plot_vertebra_detection(image, vertebra_info, vertebra_names, output_dir):
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.imshow(image)
+    for name, color in zip(vertebra_names, ['r', 'g', 'y']):
+        ax.axhline(vertebra_info[f'{name}_slice'], color=color)
+        ax.text(0, vertebra_info[f'{name}_slice'], f'{name} {vertebra_info[f"{name}_probability"]:.2f}', color='r')
+    plt.savefig(output_dir + f'/vertebrae_detection_overlay.png')
 
 
 def save_overlay(dicom_series, slice_loc, output_dir):

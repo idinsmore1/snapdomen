@@ -91,9 +91,13 @@ def get_waist_circumference(series: DicomSeries, slice_idx: np.ndarray) -> Tuple
     :return: the circumference of the body in centimeters
     """
     l3_image = series.pixel_array[slice_idx].copy()
+    # fig = plt.imshow(l3_image, cmap='gray')
+    # plt.savefig(f'{slice_idx}.png')
     spacing = series.spacing[0]
     # Remove exterior artifacts
     binary_l3 = binarize_image(l3_image)
+    # fig = plt.imshow(binary_l3)
+    plt.savefig('binary_l3.png')
     body = get_largest_connected_component(binary_l3)
     l3_pp = remove_exterior_artifacts(l3_image, body)
     # Measure circumference
