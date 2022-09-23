@@ -55,7 +55,7 @@ def main():
     plot_vertebra_detection(dicom_series.frontal, vertebrae_info, vertebrae_names, output_directory)
     quant_data.update(vertebrae_info)
 
-    start, end = vertebrae_info['l1_slice'], vertebrae_info['l5_slice'] + 1
+    start, end = vertebrae_info['l1_slice'], vertebrae_info['l5_slice']
     # Detect the abdomen
     fat_measurements = quantify_abdominal_fat(dicom_series, start, end, args.abdomen_weights)
     quant_data['abdominal_fat'] = fat_measurements
