@@ -119,12 +119,19 @@ def quantify_abdominal_fat(series, start, end, l3, model_weights, outdir):
         visceral_fat_pixels, visceral_fat_area = measure_fat(image, interior, series.spacing[0], series.spacing[1])
         subcutaneous_fat_pixels, subcutaneous_fat_area = measure_fat(image, exterior, series.spacing[0],
                                                                      series.spacing[1])
+        trunk_pixels = interior.sum()
+        abdominal_wall_area = np.float(trunk_pixels * series.spacing[0] * series.spacing[1])
+
         save_im = [True if i in [start, end - 1, l3] else False][0]
         if save_im:
             save_abdominal_wall_overlay(image, interior, f"{outdir}/MRN{series.mrn}_{series.accession}_{series.cut}_slice_{i}_abdominal_wall.png")
-        _, wc = get_waist_circumference(series, i, save_im=save_im, outdir=outdir)
+        wc, waist_pixels = get_waist_circumference(series, i, save_im=save_im, outdir=outdir)
+        waist_area = np.float(waist_pixels * series.spacing[0] * series.spacing[1])
+
         measurements[f'slice_{i}'] = {
             'waist_circumference': float(wc),
+            'waist_area': float(waist_area),
+            'abdominal_wall_area': float(abdominal_wall_area),
             'visceral_fat_pixels': int(visceral_fat_pixels),
             'visceral_fat_area': float(visceral_fat_area),
             'subcutaneous_fat_pixels': int(subcutaneous_fat_pixels),

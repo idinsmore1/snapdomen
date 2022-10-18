@@ -26,7 +26,7 @@ parser.add_argument('--vertebrae-names', type=str, help='The names of the verteb
 parser.add_argument('--vertebrae-threshold', default=0.1, type=float,
                     help='The threshold for the vertebrae segmentation (default: 0.1)')
 parser.add_argument('--abdomen-weights', type=str, help='The path to the abdomen segmentation model weights')
-parser.add_argument('--gpu', type=str, help='The GPU to use', default='0')
+parser.add_argument('--gpu', type=str, help='The GPU to use', default=None)
 parser.add_argument('--write-file-names', action='store_true', help='Write the completed file names to a log file')
 args = parser.parse_args()
 
@@ -38,9 +38,10 @@ def main():
     """
     plt.ioff()
     # set the GPU to use
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    physical_devices = tf.config.experimental.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    if args.gpu is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+        physical_devices = tf.config.experimental.list_physical_devices('GPU')
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     # Detect vertebrae locations
     vertebrae_weights = args.vertebrae_weights.split(',')
@@ -50,15 +51,18 @@ def main():
     # del dicom_series
     dicom_series = DicomSeries(args.input, args.input_pattern, 40, 1200)
     quant_data = dicom_series.series_info
+    del_keys = []
     for k in quant_data.keys():
         if k not in ['mrn', 'accession', 'cut', 'scan_date']:
-            del quant_data[k]
+            del_keys.append(k)
+    for k in del_keys:
+        del quant_data[k]
     output_directory = f'{args.output_dir}/MRN{dicom_series.mrn}'
     print('Detecting vertebrae locations...')
     vertebrae_info = detect_vertebra(dicom_series.frontal, vertebra_model, vertebrae_weights, vertebrae_names,
                                      dicom_series.spacing, 1)
     # Plot the vertebrae detection
-    plot_vertebra_detection(dicom_series.frontal, vertebrae_info, vertebrae_names, output_directory)
+    plot_vertebra_detection(dicom_series, vertebrae_info, vertebrae_names, output_directory)
     quant_data.update(vertebrae_info)
     print('Vertebrae detection completed!\n')
 
@@ -67,10 +71,10 @@ def main():
     print('Measuring abdominal fat...')
     try:
         dicom_series.pixel_array = np.clip(dicom_series.pixel_array, -500, 500)
-        fat_measurements = quantify_abdominal_fat(dicom_series, start, end, l3, args.abdomen_weights)
+        fat_measurements = quantify_abdominal_fat(dicom_series, start, end, l3, args.abdomen_weights, output_directory)
         quant_data['abdominal_fat'] = fat_measurements
-    except Exception:
-        print('Abdominal fat did not measure properly {}'.format(Exception))
+    except Exception as e:
+        print(f'Abdominal fat did not measure properly {e}')
 
     json.dump(quant_data,
               open(

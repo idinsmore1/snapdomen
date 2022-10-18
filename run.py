@@ -24,7 +24,7 @@ parser.add_argument('--vertebrae-weights', type=str, help='The path to the verte
 parser.add_argument('--vertebrae-names', type=str, help='The names of the vertebrae, comma separated')
 parser.add_argument('--vertebrae-threshold', default=0.1, type=float, help='The threshold for the vertebrae segmentation (default: 0.1)')
 parser.add_argument('--abdomen-weights', type=str, help='The path to the abdomen segmentation model weights')
-parser.add_argument('--gpu', type=str, help='The GPU to use', default='0')
+parser.add_argument('--gpu', type=str, help='The GPU to use', default=None)
 parser.add_argument('--write-file-names', action='store_true', help='Write the completed file names to a log file')
 args = parser.parse_args()
 
@@ -35,9 +35,10 @@ def main():
     """
     # set the GPU to use
     plt.ioff()
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    physical_devices = tf.config.experimental.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    if args.gpu is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+        physical_devices = tf.config.experimental.list_physical_devices('GPU')
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
     # Read in the dicom series
     dicom_series = DicomSeries(args.input, args.input_pattern)
     quant_data = dicom_series.series_info

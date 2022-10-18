@@ -118,4 +118,5 @@ def get_waist_circumference(series: DicomSeries, slice_idx: int, save_im=False, 
         plot_contours(l3_image, l3_pp,
                       f'{outdir}/{series.mrn}_{series.accession}_{series.cut}_slice_{slice_idx}_contours.png')
     waist_circ = measure_circumference(l3_pp, spacing)
-    return l3_pp, waist_circ
+    waist_pixels = l3_pp.sum()
+    return waist_circ, waist_pixels
