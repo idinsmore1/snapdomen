@@ -95,7 +95,7 @@ def main():
 
     json.dump(quant_data, open(f'{output_directory}/MRN{dicom_series.mrn}_{dicom_series.accession}_{dicom_series.cut}_quant.json', 'w'))
     if args.write_file_names:
-        with open(f'{output_directory}/completed.txt', 'a') as f:
+        with open(f'{args.output_dir}/completed.txt', 'a') as f:
             f.write(f'{args.input}\n')
 
     print('Quantification finished!')

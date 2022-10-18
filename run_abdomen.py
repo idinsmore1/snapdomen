@@ -62,22 +62,22 @@ def main():
     quant_data.update(vertebrae_info)
     print('Vertebrae detection completed!\n')
 
-    start, end = vertebrae_info['l1_slice'], vertebrae_info['l5_slice']
+    start, end, l3 = vertebrae_info['l1_slice'], vertebrae_info['l5_slice'], vertebrae_info['l3_slice']
     # Detect the abdomen
     print('Measuring abdominal fat...')
     try:
         dicom_series.pixel_array = np.clip(dicom_series.pixel_array, -500, 500)
-        fat_measurements = quantify_abdominal_fat(dicom_series, start, end, args.abdomen_weights)
+        fat_measurements = quantify_abdominal_fat(dicom_series, start, end, l3, args.abdomen_weights)
         quant_data['abdominal_fat'] = fat_measurements
     except Exception:
-        print('Abdominal fat did not measure properly')
+        print('Abdominal fat did not measure properly {}'.format(Exception))
 
     json.dump(quant_data,
               open(
                   f'{output_directory}/MRN{dicom_series.mrn}_{dicom_series.accession}_{dicom_series.cut}_abdominal_fat.json',
                   'w'))
     if args.write_file_names:
-        with open(f'{output_directory}/completed.txt', 'a') as f:
+        with open(f'{args.output_dir}/completed.txt', 'a') as f:
             f.write(f'{args.input}\n')
 
     print('Quantification finished!')
