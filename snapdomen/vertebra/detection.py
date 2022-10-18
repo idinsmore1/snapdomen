@@ -78,13 +78,13 @@ def detect_vertebra(frontal_mip, model, vertebra_weights, vertebra_names, spacin
     return vertebra_info
 
 
-def plot_vertebra_detection(image, vertebra_info, vertebra_names, output_dir):
+def plot_vertebra_detection(series, vertebra_info, vertebra_names, output_dir):
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    ax.imshow(image)
+    ax.imshow(series.frontal)
     for name, color in zip(vertebra_names, ['r', 'g', 'y']):
         ax.axhline(vertebra_info[f'{name}_slice'], color=color)
         ax.text(0, vertebra_info[f'{name}_slice'], f'{name} {vertebra_info[f"{name}_probability"]:.2f}', color='r')
-    plt.savefig(output_dir + f'/vertebrae_detection_overlay.png')
+    plt.savefig(output_dir + f'/MRN{series.mrn}_{series.accession}_{series.cut}_vertebrae_overlay.png')
 
 
 def save_overlay(dicom_series, slice_loc, output_dir):

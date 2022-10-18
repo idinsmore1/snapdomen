@@ -1,7 +1,7 @@
 import numpy as np
 import keras.backend as K
 from scipy.ndimage import binary_fill_holes, binary_erosion
-
+import matplotlib.pyplot as plt
 from .model import build_unet
 from snapdomen.imaging.utils import normalize_image
 from snapdomen.waistcirc.measure import get_largest_connected_component, get_waist_circumference
@@ -80,13 +80,15 @@ def predict_abdomen(series: DicomSeries, start: int, end: int, model_weights: st
     return preds
 
 
-def quantify_abdominal_fat(series, start, end, model_weights):
+def quantify_abdominal_fat(series, start, end, l3, model_weights, outdir):
     """
     Quantify the fat in the abdomen from a ct scan
     :param series: the ct scan
     :param start: the start axial index
     :param end: the end axial index
+    :param l3: the l3 vertebra axial index
     :param model_weights: the path to the model weights
+    :param outdir: the output directory
     :return: the fat measurements for each slice
     """
     preds = predict_abdomen(series, start, end, model_weights)
@@ -98,7 +100,12 @@ def quantify_abdominal_fat(series, start, end, model_weights):
         visceral_fat_pixels, visceral_fat_area = measure_fat(image, interior, series.spacing[0], series.spacing[1])
         subcutaneous_fat_pixels, subcutaneous_fat_area = measure_fat(image, exterior, series.spacing[0],
                                                                      series.spacing[1])
-        _, wc = get_waist_circumference(series, i)
+        save_im = [True if i in [start, end - 1, l3] else False][0]
+        if save_im:
+            image[interior] = 255
+            plt.imsave(f"{outdir}/MRN{series.mrn}_{series.accession}_{series.cut}_slice_{i}_abdominal_wall.png", image,
+                       cmap="gray")
+        _, wc = get_waist_circumference(series, i, save_im=save_im, outdir=outdir)
         measurements[f'slice_{i}'] = {
             'waist_circumference': float(wc),
             'visceral_fat_pixels': int(visceral_fat_pixels),

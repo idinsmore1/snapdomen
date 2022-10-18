@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import keras.backend as K
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 
@@ -36,6 +36,7 @@ def main():
     Main CLI runner that combines the effects of all the applications in snapdomen\n
     :return: None
     """
+    plt.ioff()
     # set the GPU to use
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     physical_devices = tf.config.experimental.list_physical_devices('GPU')

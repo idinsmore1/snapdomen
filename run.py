@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import keras.backend as K
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 
@@ -34,6 +34,7 @@ def main():
     :return: None
     """
     # set the GPU to use
+    plt.ioff()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -58,7 +59,7 @@ def main():
     # Measure the spleen
     try:
         print('Measuring spleen...')
-        spleen_data = measure_spleen_hu(dicom_series, args.spleen_weights, output_directory, args.roi_area, args.roi_alpha)
+        spleen_data = measure_spleen_hu(dicom_series, args.spleen_weights, args.roi_area, args.roi_alpha)
         quant_data.update(spleen_data)
         quant_data['spleen_completed'] = '1'
         print('Spleen measurement completed!\n')
@@ -77,19 +78,20 @@ def main():
     print('Detecting vertebrae locations...')
     vertebrae_info = detect_vertebra(dicom_series.frontal, vertebra_model, vertebrae_weights, vertebrae_names, dicom_series.spacing, 1)
     # Plot the vertebrae detection
-    plot_vertebra_detection(dicom_series.frontal, vertebrae_info, vertebrae_names, output_directory)
+    plot_vertebra_detection(dicom_series, vertebrae_info, vertebrae_names, output_directory)
     quant_data.update(vertebrae_info)
     print('Vertebrae detection completed!\n')
 
-    start, end = vertebrae_info['l1_slice'], vertebrae_info['l5_slice']
+    start, end, l3 = vertebrae_info['l1_slice'], vertebrae_info['l5_slice'], vertebrae_info['l3_slice']
     # Detect the abdomen
     print('Measuring abdominal fat...')
     try:
         dicom_series.pixel_array = np.clip(dicom_series.pixel_array, -500, 500)
-        fat_measurements = quantify_abdominal_fat(dicom_series, start, end, args.abdomen_weights)
+        fat_measurements = quantify_abdominal_fat(dicom_series, start, end, l3, args.abdomen_weights, output_directory)
         quant_data['abdominal_fat'] = fat_measurements
-    except Exception:
-        print('Abdominal fat did not measure properly')
+    except Exception as e:
+        print(f'Abdominal fat measurement failed: {e}\n')
+        # print('Abdominal fat did not measure properly')
 
     json.dump(quant_data, open(f'{output_directory}/MRN{dicom_series.mrn}_{dicom_series.accession}_{dicom_series.cut}_quant.json', 'w'))
     if args.write_file_names:

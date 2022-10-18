@@ -5,6 +5,7 @@ from skimage.measure import label, find_contours, regionprops
 from typing import Tuple, Any
 from snapdomen.imaging.dicomseries import DicomSeries
 
+
 # @njit
 def binarize_image(image: np.ndarray, threshold: int = -500) -> np.ndarray:
     """
@@ -80,14 +81,16 @@ def plot_contours(original_image, body_mask, output_path):
     ax.set_xticks([])
     ax.set_yticks([])
     plt.savefig(output_path)
+    # plt.show()
 
 
-def get_waist_circumference(series: DicomSeries, slice_idx: np.ndarray) -> Tuple[Any, Any]:
+def get_waist_circumference(series: DicomSeries, slice_idx: int, save_im=False, outdir='./') -> Tuple[Any, Any]:
     """
     A function to measure the circumference of the body in centimeters\n
-    :param axial_array: the axial ct scan series
+    :param series: the axial ct scan series
     :param slice_idx: the index of the axial slice to be measured
-    :param spacing: the spacing of the ct scan in millimeters
+    :param save_im: whether to save the image with the contours
+    :param outdir: the output directory to save the image
     :return: the circumference of the body in centimeters
     """
     l3_image = series.pixel_array[slice_idx].copy()
@@ -96,14 +99,14 @@ def get_waist_circumference(series: DicomSeries, slice_idx: np.ndarray) -> Tuple
     spacing = series.spacing[0]
     # Remove exterior artifacts
     binary_l3 = binarize_image(l3_image)
-    # fig = plt.imshow(binary_l3)
-    plt.savefig(f'{series.mrn}_{series.accession}_{series.cut}_binary_l3.png')
-    plt.show()
     body = get_largest_connected_component(binary_l3)
     l3_pp = remove_exterior_artifacts(l3_image, body)
     # Measure circumference
     l3_pp = binarize_image(l3_pp)
-    # Erosion is to remove small artifacts attached to body (clips from table, etc
-    l3_pp = binary_erosion(l3_pp, iterations=4)
+    # Erosion is to remove small artifacts attached to body (clips from table, etc)
+    l3_pp = binary_erosion(l3_pp, iterations=3)
+    if save_im:
+        plot_contours(l3_image, l3_pp,
+                      f'{outdir}/{series.mrn}_{series.accession}_{series.cut}_slice_{slice_idx}_contours.png')
     waist_circ = measure_circumference(l3_pp, spacing)
     return l3_pp, waist_circ
