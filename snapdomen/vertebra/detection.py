@@ -30,7 +30,7 @@ def pad_image_to_size(image, img_size=(64, 64, 64), loc=(2, 2, 2), **kwargs):
     to_padding = [[0, 0] for _ in range(rank)]
 
     for i in range(rank):
-        # for each dimensions find whether it is supposed to be cropped or padded
+        # for each dimension find whether it is supposed to be cropped or padded
         if image.shape[i] < img_size[i]:
             if loc[i] == 0:
                 to_padding[i][0] = (img_size[i] - image.shape[i])

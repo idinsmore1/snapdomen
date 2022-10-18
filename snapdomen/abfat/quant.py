@@ -4,7 +4,7 @@ from scipy.ndimage import binary_fill_holes, binary_erosion
 import matplotlib.pyplot as plt
 from .model import build_unet
 from snapdomen.imaging.utils import normalize_image
-from snapdomen.waistcirc.measure import get_largest_connected_component, get_waist_circumference
+from snapdomen.waistcirc.measure import get_largest_connected_component, get_waist_circumference, remove_artifacts
 from snapdomen.imaging.dicomseries import DicomSeries
 
 
@@ -80,6 +80,24 @@ def predict_abdomen(series: DicomSeries, start: int, end: int, model_weights: st
     return preds
 
 
+def save_abdominal_wall_overlay(image, mask, output_path):
+    """
+    Save the abdominal wall overlay
+    :param image: the original axial image slice from the ct scan
+    :param mask: the abdominal wall mask
+    :param output_path: the path to save the overlay
+    :return: None
+    """
+    plt.figure()
+    # plt.subplot(1, 2, 1)
+    # plt.imshow(image, cmap='gray', interpolation='none')
+    # plt.subplot(1, 2, 2)
+    plt.imshow(image, cmap='gray', interpolation='none')
+    plt.imshow(mask, alpha=0.5, cmap='jet', interpolation='none')
+    plt.savefig(output_path)
+    plt.close()
+
+
 def quantify_abdominal_fat(series, start, end, l3, model_weights, outdir):
     """
     Quantify the fat in the abdomen from a ct scan
@@ -96,15 +114,14 @@ def quantify_abdominal_fat(series, start, end, l3, model_weights, outdir):
     for i in range(start, end):
         image = series.pixel_array[i].copy()
         pred = preds[i - start]
+        image = remove_artifacts(image)
         interior, exterior = separate_abdominal_cavity(image, pred)
         visceral_fat_pixels, visceral_fat_area = measure_fat(image, interior, series.spacing[0], series.spacing[1])
         subcutaneous_fat_pixels, subcutaneous_fat_area = measure_fat(image, exterior, series.spacing[0],
                                                                      series.spacing[1])
         save_im = [True if i in [start, end - 1, l3] else False][0]
         if save_im:
-            image[interior] = 255
-            plt.imsave(f"{outdir}/MRN{series.mrn}_{series.accession}_{series.cut}_slice_{i}_abdominal_wall.png", image,
-                       cmap="gray")
+            save_abdominal_wall_overlay(image, interior, f"{outdir}/MRN{series.mrn}_{series.accession}_{series.cut}_slice_{i}_abdominal_wall.png")
         _, wc = get_waist_circumference(series, i, save_im=save_im, outdir=outdir)
         measurements[f'slice_{i}'] = {
             'waist_circumference': float(wc),

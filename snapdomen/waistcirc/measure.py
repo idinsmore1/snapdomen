@@ -83,6 +83,17 @@ def plot_contours(original_image, body_mask, output_path):
     plt.savefig(output_path)
     # plt.show()
 
+def remove_artifacts(l3_image):
+    """
+    A function to remove artifacts outside the body from CT scans\n
+    :param l3_image: the original ct image
+    :return: the cleaned up original image
+    """
+    binary_l3 = binarize_image(l3_image)
+    body = get_largest_connected_component(binary_l3)
+    l3_pp = remove_exterior_artifacts(l3_image, body)
+    return l3_pp
+
 
 def get_waist_circumference(series: DicomSeries, slice_idx: int, save_im=False, outdir='./') -> Tuple[Any, Any]:
     """
@@ -98,9 +109,7 @@ def get_waist_circumference(series: DicomSeries, slice_idx: int, save_im=False, 
     # plt.savefig(f'{slice_idx}.png')
     spacing = series.spacing[0]
     # Remove exterior artifacts
-    binary_l3 = binarize_image(l3_image)
-    body = get_largest_connected_component(binary_l3)
-    l3_pp = remove_exterior_artifacts(l3_image, body)
+    l3_pp = remove_artifacts(l3_image)
     # Measure circumference
     l3_pp = binarize_image(l3_pp)
     # Erosion is to remove small artifacts attached to body (clips from table, etc)
