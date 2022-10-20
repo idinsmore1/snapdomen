@@ -2,3 +2,6 @@
 data
 tests
 .ipynb_checkpoints
+*.ipynb
+*.sh
+*.dio
