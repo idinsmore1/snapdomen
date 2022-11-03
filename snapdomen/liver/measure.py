@@ -101,7 +101,7 @@ def measure_liver_hu(series: DicomSeries, model_weights, output_directory, roi_a
         check = ct_image.copy()
         check[roi_mask == 1] = 255
         fig = plt.imshow(check, cmap='gray')
-        plt.savefig(f'{output_directory}/{filename}_{name}_roi.png')
+        plt.savefig(f'{output_directory}/MRN{filename}_{name}_roi.png')
     return hounsfield_data
 
 
