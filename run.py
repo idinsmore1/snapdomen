@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+os['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import keras.backend as K
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -11,6 +12,7 @@ from snapdomen.liver.measure import measure_liver_hu, measure_spleen_hu
 from snapdomen.vertebra.model import load_model
 from snapdomen.vertebra.detection import detect_vertebra, plot_vertebra_detection
 from snapdomen.abfat.quant import quantify_abdominal_fat
+
 
 parser = argparse.ArgumentParser(description='Snapdomen CLI - Metabolic Snapshot from CT Scan')
 parser.add_argument('--input', type=str, help='The path to the input dicom series')

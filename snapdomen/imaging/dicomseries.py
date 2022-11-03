@@ -130,9 +130,9 @@ class DicomSeries:
                         if np.array_equal(orientation, direction):
                             value = key
                             break
-                elif tag == 'PatientBirthDate':
-                    value = datetime.strptime(value, '%Y%m%d').date()
-                    value = value.strftime('%Y-%m-%d')
+                # elif tag == 'PatientBirthDate':
+                #     value = datetime.strptime(value, '%Y%m%d').date()
+                #     value = value.strftime('%Y-%m-%d')
                 elif tag == 'AcquisitionDate':
                     value = datetime.strptime(value, '%Y%m%d').date()
                     value = value.strftime('%Y-%m-%d')

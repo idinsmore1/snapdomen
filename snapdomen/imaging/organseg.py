@@ -128,6 +128,7 @@ class OrganSeg:
         :return: a numpy array containing the center point
         """
         i = 0
+        erode_last = seg_erode
         while np.sum(seg_erode) > erosion_limit:
             erode_last = seg_erode
             seg_erode = OrganSeg._erode3d(seg_erode)
