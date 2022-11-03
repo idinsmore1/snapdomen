@@ -93,10 +93,12 @@ class OrganSeg:
             if val > threshold:
                 has_organ.append(i)
         start, end = self._longest_consecutive_seg(has_organ)
+        im_start = has_organ[start]
+        im_end = has_organ[end+1]
         # Create the final segmentation
         # Set any slices that don't have liver to zero
-        seg[:start, :, :] = 0
-        seg[end:, :, :] = 0
+        seg[:im_start, :, :] = 0
+        seg[im_end:, :, :] = 0
         return seg
 
     @staticmethod
